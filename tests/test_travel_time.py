@@ -615,8 +615,8 @@ class TestTravelTimeCalculator:
             hours=3, minutes=59
         )  # Updated from 4h0m to 3h59m
         expected_total_travel_time = timedelta(
-            hours=3, minutes=59
-        )  # Should match total_air_time
+            hours=4, minutes=0
+        )  # Updated from 3h59m to 4h0m
         expected_total_layover_time = timedelta(minutes=1)
         expected_individual_layovers = [timedelta(minutes=1)]
 
