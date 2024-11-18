@@ -33,18 +33,14 @@ if __name__ == "__main__":
 
     # Initialize the calculator
     calculator = TravelTimeCalculator(flights=flights, departure_date="2024-01-01")
-
-    # Calculate times
     total_air_time, total_travel_time, total_layover_time, layover_times = (
         calculator.calculate_travel_times()
     )
 
-    # Display results using helper methods
     print(f"Total Air Time: {calculator.get_total_air_time()}")
     print(f"Total Travel Time: {calculator.get_total_travel_time()}")
     print(f"Total Layover Time: {calculator.get_total_layover_time()}")
 
-    # Display individual layover times
     individual_layovers = calculator.get_individual_layover_times()
     for idx, layover in enumerate(individual_layovers, start=1):
         print(f"Layover {idx}: {layover}")
