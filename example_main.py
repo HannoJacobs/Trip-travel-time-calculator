@@ -1,3 +1,5 @@
+"""Example main.py"""
+
 from src.calculator import *
 
 

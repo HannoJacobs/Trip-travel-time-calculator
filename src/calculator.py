@@ -1,4 +1,4 @@
-# src/calculator.py
+"""Calculates the times"""
 
 from datetime import datetime, timedelta
 from typing import List, Tuple, Optional

@@ -8,5 +8,4 @@ This code allows you to setup a trip with several flights that cover multiple ti
 
 ## Setup
 
-install the requirements.txt and then create a trip for yourself
-
+Install the requirements.txt and then create a trip for yourself using the [example_main.py](example_main.py)
