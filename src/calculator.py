@@ -52,15 +52,21 @@ class TravelTimeCalculator:
         self.flights = flights
         self.base_date = base_date
         self.layover_times: List[timedelta] = []  # Stores individual layover durations
+        self.total_air_time: timedelta = timedelta()
+        self.total_travel_time: timedelta = timedelta()
+        self.total_layover_time: timedelta = timedelta()
 
-    def calculate_travel_times(self) -> Tuple[timedelta, timedelta, List[timedelta]]:
+    def calculate_travel_times(
+        self,
+    ) -> Tuple[timedelta, timedelta, timedelta, List[timedelta]]:
         """
-        Calculate total air time, total travel time, and layover times for the sequence of flights.
+        Calculate total air time, total travel time, total layover time, and individual layover times for the sequence of flights.
 
         :return: A tuple containing:
                  - Total air time as a timedelta object.
                  - Total travel time as a timedelta object.
-                 - List of layover times as timedelta objects.
+                 - Total layover time as a timedelta object.
+                 - List of individual layover times as timedelta objects.
         """
         # Initialize base date
         try:
@@ -68,11 +74,11 @@ class TravelTimeCalculator:
         except ValueError as e:
             raise ValueError(f"Invalid base_date format: {e}")
 
-        # Initialize variables
-        total_air_time = timedelta()
-        initial_departure_utc: Optional[datetime] = None
-        final_arrival_utc: Optional[datetime] = None
-        self.layover_times = []  # Reset layover times
+        # Reset cumulative variables
+        self.total_air_time = timedelta()
+        self.total_travel_time = timedelta()
+        self.total_layover_time = timedelta()
+        self.layover_times = []
 
         # Previous flight's arrival datetime in UTC
         prev_arrival_utc: Optional[datetime] = None
@@ -115,6 +121,7 @@ class TravelTimeCalculator:
                 # Calculate layover time between prev_arrival_utc and dep_datetime_utc
                 layover_duration = dep_datetime_utc - prev_arrival_utc
                 self.layover_times.append(layover_duration)
+                self.total_layover_time += layover_duration
 
             # Convert local arrival time to UTC datetime
             arr_datetime_local = datetime.combine(dep_datetime_local.date(), arr_time)
@@ -129,7 +136,7 @@ class TravelTimeCalculator:
 
             # Calculate flight duration
             flight_duration = arr_datetime_utc - dep_datetime_utc
-            total_air_time += flight_duration
+            self.total_air_time += flight_duration
 
             # Update initial departure UTC
             if index == 0:
@@ -146,11 +153,16 @@ class TravelTimeCalculator:
 
         # Calculate total travel time
         if initial_departure_utc and final_arrival_utc:
-            total_travel_time = final_arrival_utc - initial_departure_utc
+            self.total_travel_time = final_arrival_utc - initial_departure_utc
         else:
-            total_travel_time = timedelta()
+            self.total_travel_time = timedelta()
 
-        return total_air_time, total_travel_time, self.layover_times
+        return (
+            self.total_air_time,
+            self.total_travel_time,
+            self.total_layover_time,
+            self.layover_times,
+        )
 
     @staticmethod
     def format_timedelta(td: timedelta) -> str:
@@ -180,7 +192,7 @@ class TravelTimeCalculator:
 
         :return: Total air time in 'X hours Y minutes' format.
         """
-        total_air_time, _, _ = self.calculate_travel_times()
+        total_air_time, _, _, _ = self.calculate_travel_times()
         return self.format_timedelta(total_air_time)
 
     def get_total_travel_time(self) -> str:
@@ -189,7 +201,7 @@ class TravelTimeCalculator:
 
         :return: Total travel time in 'X hours Y minutes' format.
         """
-        _, total_travel_time, _ = self.calculate_travel_times()
+        _, total_travel_time, _, _ = self.calculate_travel_times()
         return self.format_timedelta(total_travel_time)
 
     def get_total_layover_time(self) -> str:
@@ -198,8 +210,7 @@ class TravelTimeCalculator:
 
         :return: Total layover time in 'X hours Y minutes' format.
         """
-        _, _, layover_times = self.calculate_travel_times()
-        total_layover_time = sum(layover_times, timedelta())
+        _, _, total_layover_time, _ = self.calculate_travel_times()
         return self.format_timedelta(total_layover_time)
 
     def get_individual_layover_times(self) -> List[str]:
@@ -208,7 +219,7 @@ class TravelTimeCalculator:
 
         :return: List of layover times in 'X hours Y minutes' format.
         """
-        _, _, layover_times = self.calculate_travel_times()
+        _, _, _, layover_times = self.calculate_travel_times()
         return [self.format_timedelta(layover) for layover in layover_times]
 
 
@@ -246,7 +257,7 @@ if __name__ == "__main__":
     calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
 
     # Calculate times
-    total_air_time, total_travel_time, layover_times = (
+    total_air_time, total_travel_time, total_layover_time, layover_times = (
         calculator.calculate_travel_times()
     )
 
