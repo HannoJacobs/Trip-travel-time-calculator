@@ -980,3 +980,54 @@ class TestTravelTimeCalculator:
         assert (
             layover_times == expected_individual_layovers
         ), "There should be no layover times for DST transition flight."
+
+    @pytest.fixture
+    def setup_non_standard_minute_offset_flight(self):
+        """
+        Fixture to set up a flight with a non-standard minute UTC offset (e.g., UTC+5:45).
+        """
+        flights = [
+            Flight(
+                departure_city="Kathmandu",
+                departure_time="15:00",
+                departure_timezone_utc_offset_in_hours=5.75,  # UTC+5:45
+                arrival_city="Kolkata",
+                arrival_time="16:30",
+                arrival_timezone_utc_offset_in_hours=5.5,  # UTC+5:30
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-10-01")
+        return calculator
+
+    def test_non_standard_minute_offset_flight(
+        self, setup_non_standard_minute_offset_flight
+    ):
+        """
+        Test a flight with a non-standard minute UTC offset (e.g., UTC+5:45 to UTC+5:30).
+        """
+        calculator = setup_non_standard_minute_offset_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 15:00 UTC+5:45 → 09:15 UTC
+        # Arrival UTC: 16:30 UTC+5:30 → 11:00 UTC
+        # Flight Duration: 1 hour 45 minutes
+
+        expected_total_air_time = timedelta(hours=1, minutes=45)
+        expected_total_travel_time = timedelta(hours=1, minutes=45)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for non-standard minute offset flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for non-standard minute offset flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for non-standard minute offset flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for non-standard minute offset flight."
