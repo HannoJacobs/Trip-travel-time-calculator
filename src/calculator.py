@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from typing import List, Tuple, Optional
+from get_timezone_with_suggestions import get_timezone_with_suggestions
 
 
 class Flight:
@@ -13,19 +14,25 @@ class Flight:
         self,
         departure_city: str,
         departure_time: str,
-        departure_timezone_utc_offset_in_hours: float,
         arrival_city: str,
         arrival_time: str,
-        arrival_timezone_utc_offset_in_hours: float,
     ):
         self.departure_city = departure_city
         self.departure_time = departure_time
-        self.departure_timezone_utc_offset_in_hours = (
-            departure_timezone_utc_offset_in_hours
-        )
         self.arrival_city = arrival_city
         self.arrival_time = arrival_time
-        self.arrival_timezone_utc_offset_in_hours = arrival_timezone_utc_offset_in_hours
+
+        # Get departure timezone and UTC offset
+        timezone_name_dep, utc_offset_dep = get_timezone_with_suggestions(
+            departure_city
+        )
+        self.departure_timezone_name = timezone_name_dep
+        self.departure_timezone_utc_offset_in_hours = utc_offset_dep
+
+        # Get arrival timezone and UTC offset
+        timezone_name_arr, utc_offset_arr = get_timezone_with_suggestions(arrival_city)
+        self.arrival_timezone_name = timezone_name_arr
+        self.arrival_timezone_utc_offset_in_hours = utc_offset_arr
 
 
 class TravelTimeCalculator:
@@ -222,33 +229,26 @@ class TravelTimeCalculator:
         return [self.format_timedelta(layover) for layover in layover_times]
 
 
-# Example Usage
 if __name__ == "__main__":
-    # Define flights with updated timezone field names
+    # Define flights without UTC offset; it will be filled automatically
     flights = [
         Flight(
             departure_city="Johannesburg",
             departure_time="16:40",
-            departure_timezone_utc_offset_in_hours=2,  # UTC+2
-            arrival_city="Luanda",
+            arrival_city="Luanda, Angola",
             arrival_time="19:10",
-            arrival_timezone_utc_offset_in_hours=1,  # UTC+1
         ),
         Flight(
-            departure_city="Luanda",
+            departure_city="Luanda, Angola",
             departure_time="23:00",
-            departure_timezone_utc_offset_in_hours=1,  # UTC+1
             arrival_city="Sao Paulo",
             arrival_time="03:30",
-            arrival_timezone_utc_offset_in_hours=-3,  # UTC-3
         ),
         Flight(
             departure_city="Sao Paulo",
             departure_time="08:35",
-            departure_timezone_utc_offset_in_hours=-3,  # UTC-3
             arrival_city="Santiago",
             arrival_time="13:00",
-            arrival_timezone_utc_offset_in_hours=-3,  # UTC-3
         ),
     ]
 
