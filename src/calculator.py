@@ -39,7 +39,6 @@ class TravelTimeCalculator:
 
         :param flights: List of Flight objects representing the itinerary.
         :param departure_date: The starting date for the first flight in 'YYYY-MM-DD' format.
-                          Default is '2024-01-01'.
         """
         self.flights = flights
         self.departure_date = departure_date
@@ -55,10 +54,10 @@ class TravelTimeCalculator:
         Calculate total air time, total travel time, total layover time, and individual layover times for the sequence of flights.
 
         :return: A tuple containing:
-                 - Total air time as a timedelta object.
-                 - Total travel time as a timedelta object.
-                 - Total layover time as a timedelta object.
-                 - List of individual layover times as timedelta objects.
+            - Total air time as a timedelta object.
+            - Total travel time as a timedelta object.
+            - Total layover time as a timedelta object.
+            - List of individual layover times as timedelta objects.
         """
         # Initialize base date
         try:
