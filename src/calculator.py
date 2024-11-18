@@ -1,3 +1,5 @@
+# src/calculator.py
+
 from datetime import datetime, timedelta
 from typing import List, Tuple, Optional
 
@@ -16,16 +18,6 @@ class Flight:
         arrival_time: str,
         arrival_timezone_utc_offset_in_hours: float,
     ):
-        """
-        Initializes a Flight object.
-
-        :param departure_city: Name of the departure city.
-        :param departure_time: Departure time in 'HH:MM' (24-hour) format (local time).
-        :param departure_timezone_utc_offset_in_hours: UTC offset for departure city (e.g., 2 for UTC+2).
-        :param arrival_city: Name of the arrival city.
-        :param arrival_time: Arrival time in 'HH:MM' (24-hour) format (local time).
-        :param arrival_timezone_utc_offset_in_hours: UTC offset for arrival city (e.g., -3 for UTC-3).
-        """
         self.departure_city = departure_city
         self.departure_time = departure_time
         self.departure_timezone_utc_offset_in_hours = (
@@ -51,7 +43,7 @@ class TravelTimeCalculator:
         """
         self.flights = flights
         self.base_date = base_date
-        self.layover_times: List[timedelta] = []  # Stores individual layover durations
+        self.layover_times: List[timedelta] = []
         self.total_air_time: timedelta = timedelta()
         self.total_travel_time: timedelta = timedelta()
         self.total_layover_time: timedelta = timedelta()
@@ -82,6 +74,8 @@ class TravelTimeCalculator:
 
         # Previous flight's arrival datetime in UTC
         prev_arrival_utc: Optional[datetime] = None
+        initial_departure_utc: Optional[datetime] = None
+        final_arrival_utc: Optional[datetime] = None
 
         for index, flight in enumerate(self.flights):
             dep_city = flight.departure_city
@@ -127,12 +121,17 @@ class TravelTimeCalculator:
             arr_datetime_local = datetime.combine(dep_datetime_local.date(), arr_time)
             arr_datetime_utc = arr_datetime_local - timedelta(hours=arr_timezone_offset)
 
-            # If arrival UTC is before departure UTC, assume arrival is next day
-            if arr_datetime_utc < dep_datetime_utc:
+            # Adjust arrival date until arrival UTC is after departure UTC
+            # This handles cases where arrival time in UTC is before or equal to departure time in UTC
+            days_added = 0
+            while arr_datetime_utc < dep_datetime_utc:
                 arr_datetime_local += timedelta(days=1)
                 arr_datetime_utc = arr_datetime_local - timedelta(
                     hours=arr_timezone_offset
                 )
+                days_added += 1
+                if days_added > 365:
+                    raise Exception("Infinite loop detected in flight scheduling.")
 
             # Calculate flight duration
             flight_duration = arr_datetime_utc - dep_datetime_utc
