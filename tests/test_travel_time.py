@@ -43,7 +43,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=-3,  # UTC-3
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-01-01")
         return calculator
 
     def test_specific_trip_calculations(self, setup_specific_trip):
@@ -92,7 +92,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,  # UTC+0
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-06-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-06-01")
         return calculator
 
     def test_single_flight_no_layover(self, setup_single_flight):
@@ -137,7 +137,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=9,  # UTC+9
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-06-15")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-06-15")
         return calculator
 
     def test_flights_crossing_midnight(self, setup_cross_midnight_flight):
@@ -183,7 +183,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=3,  # UTC+3
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-07-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-07-01")
         return calculator
 
     def test_fractional_utc_offsets(self, setup_fractional_timezone_flight):
@@ -245,7 +245,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=4,  # UTC+4
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-05-10")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-05-10")
         return calculator
 
     def test_multiple_layovers(self, setup_multiple_layovers):
@@ -327,7 +327,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,  # UTC+0
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-08-20")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-08-20")
         return calculator
 
     def test_large_layover(self, setup_large_layover):
@@ -386,7 +386,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,  # UTC+0
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-09-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-09-01")
         return calculator
 
     def test_zero_duration_flight(self, setup_zero_duration_flight):
@@ -431,7 +431,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=14,  # UTC+14
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-01-01")
         return calculator
 
     def test_max_time_zone_difference_flight(
@@ -482,7 +482,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=-10,  # UTC-10
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-06-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-06-01")
         return calculator
 
     def test_date_line_crossing_flight(self, setup_date_line_crossing_flight):
@@ -531,7 +531,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=8,  # UTC+8
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-03-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-03-01")
         return calculator
 
     def test_long_haul_flight(self, setup_long_haul_flight):
@@ -588,7 +588,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=1,  # UTC+1
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-04-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-04-01")
         return calculator
 
     def test_minimal_layover_flight(self, setup_minimal_layover_flight):
@@ -656,7 +656,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,  # UTC+0
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-05-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-05-01")
         return calculator
 
     def test_maximal_layover_flight(self, setup_maximal_layover_flight):
@@ -730,7 +730,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=2,  # UTC+2
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-10-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-10-01")
         return calculator
 
     def test_rapid_succession_flights(self, setup_rapid_succession_flights):
@@ -808,7 +808,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,  # UTC+0
             ),
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-08-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-08-01")
         return calculator
 
     def test_multiple_day_jump_flights(self, setup_multiple_day_jump_flights):
@@ -875,7 +875,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=5.5,  # UTC+5:30
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-09-10")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-09-10")
         return calculator
 
     def test_complex_fractional_timezone_flight(
@@ -925,7 +925,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=0,
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-01-01")
 
         with pytest.raises(ValueError):
             calculator.calculate_travel_times()
@@ -946,7 +946,7 @@ class TestTravelTimeCalculator:
             )
         ]
         calculator = TravelTimeCalculator(
-            flights=flights, base_date="2024-11-03"
+            flights=flights, departure_date="2024-11-03"
         )  # DST ends on first Sunday in November
         return calculator
 
@@ -996,7 +996,7 @@ class TestTravelTimeCalculator:
                 arrival_timezone_utc_offset_in_hours=5.5,  # UTC+5:30
             )
         ]
-        calculator = TravelTimeCalculator(flights=flights, base_date="2024-10-01")
+        calculator = TravelTimeCalculator(flights=flights, departure_date="2024-10-01")
         return calculator
 
     def test_non_standard_minute_offset_flight(

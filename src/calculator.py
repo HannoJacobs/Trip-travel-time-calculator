@@ -33,16 +33,16 @@ class TravelTimeCalculator:
     Calculates total air time, total travel time, and total layover time for a sequence of flights.
     """
 
-    def __init__(self, flights: List[Flight], base_date: str = "2024-01-01"):
+    def __init__(self, flights: List[Flight], departure_date: str = "2024-01-01"):
         """
         Initializes the TravelTimeCalculator.
 
         :param flights: List of Flight objects representing the itinerary.
-        :param base_date: The starting date for the first flight in 'YYYY-MM-DD' format.
+        :param departure_date: The starting date for the first flight in 'YYYY-MM-DD' format.
                           Default is '2024-01-01'.
         """
         self.flights = flights
-        self.base_date = base_date
+        self.departure_date = departure_date
         self.layover_times: List[timedelta] = []
         self.total_air_time: timedelta = timedelta()
         self.total_travel_time: timedelta = timedelta()
@@ -62,9 +62,9 @@ class TravelTimeCalculator:
         """
         # Initialize base date
         try:
-            current_date = datetime.strptime(self.base_date, "%Y-%m-%d")
+            current_date = datetime.strptime(self.departure_date, "%Y-%m-%d")
         except ValueError as e:
-            raise ValueError(f"Invalid base_date format: {e}")
+            raise ValueError(f"Invalid departure_date format: {e}")
 
         # Reset cumulative variables
         self.total_air_time = timedelta()
@@ -220,52 +220,3 @@ class TravelTimeCalculator:
         """
         _, _, _, layover_times = self.calculate_travel_times()
         return [self.format_timedelta(layover) for layover in layover_times]
-
-
-# Example Usage
-if __name__ == "__main__":
-    # Define flights with updated timezone field names
-    flights = [
-        Flight(
-            departure_city="Johannesburg",
-            departure_time="16:40",
-            departure_timezone_utc_offset_in_hours=2,  # UTC+2
-            arrival_city="Luanda",
-            arrival_time="19:10",
-            arrival_timezone_utc_offset_in_hours=1,  # UTC+1
-        ),
-        Flight(
-            departure_city="Luanda",
-            departure_time="23:00",
-            departure_timezone_utc_offset_in_hours=1,  # UTC+1
-            arrival_city="Sao Paulo",
-            arrival_time="03:30",
-            arrival_timezone_utc_offset_in_hours=-3,  # UTC-3
-        ),
-        Flight(
-            departure_city="Sao Paulo",
-            departure_time="08:35",
-            departure_timezone_utc_offset_in_hours=-3,  # UTC-3
-            arrival_city="Santiago",
-            arrival_time="13:00",
-            arrival_timezone_utc_offset_in_hours=-3,  # UTC-3
-        ),
-    ]
-
-    # Initialize the calculator
-    calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
-
-    # Calculate times
-    total_air_time, total_travel_time, total_layover_time, layover_times = (
-        calculator.calculate_travel_times()
-    )
-
-    # Display results using helper methods
-    print(f"Total Air Time: {calculator.get_total_air_time()}")
-    print(f"Total Travel Time: {calculator.get_total_travel_time()}")
-    print(f"Total Layover Time: {calculator.get_total_layover_time()}")
-
-    # Display individual layover times
-    individual_layovers = calculator.get_individual_layover_times()
-    for idx, layover in enumerate(individual_layovers, start=1):
-        print(f"Layover {idx}: {layover}")
