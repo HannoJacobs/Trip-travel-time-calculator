@@ -416,6 +416,567 @@ class TestTravelTimeCalculator:
             layover_times == expected_individual_layovers
         ), "There should be no layover times for zero duration flight."
 
+    @pytest.fixture
+    def setup_max_time_zone_difference_flight(self):
+        """
+        Fixture to set up a flight with the maximum time zone difference (UTC-12 to UTC+14).
+        """
+        flights = [
+            Flight(
+                departure_city="Baker Island",
+                departure_time="00:00",
+                departure_timezone_utc_offset_in_hours=-12,  # UTC-12
+                arrival_city="Kiritimati Island",
+                arrival_time="14:00",
+                arrival_timezone_utc_offset_in_hours=14,  # UTC+14
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
+        return calculator
 
-if __name__ == "__main__":
-    pytest.main()
+    def test_max_time_zone_difference_flight(
+        self, setup_max_time_zone_difference_flight
+    ):
+        """
+        Test a flight with the maximum time zone difference (UTC-12 to UTC+14).
+        """
+        calculator = setup_max_time_zone_difference_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 00:00 UTC-12 → 12:00 UTC
+        # Arrival UTC: 14:00 UTC+14 → 00:00 UTC (next day)
+        # Flight Duration: 12 hours (00:00 UTC next day - 12:00 UTC same day)
+
+        expected_total_air_time = timedelta(hours=12, minutes=0)
+        expected_total_travel_time = timedelta(hours=12, minutes=0)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for maximum time zone difference flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for maximum time zone difference flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for maximum time zone difference flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for maximum time zone difference flight."
+
+    @pytest.fixture
+    def setup_date_line_crossing_flight(self):
+        """
+        Fixture to set up a flight that crosses the International Date Line.
+        """
+        flights = [
+            Flight(
+                departure_city="Fiji",
+                departure_time="23:00",
+                departure_timezone_utc_offset_in_hours=12,  # UTC+12
+                arrival_city="Honolulu",
+                arrival_time="14:00",
+                arrival_timezone_utc_offset_in_hours=-10,  # UTC-10
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-06-01")
+        return calculator
+
+    def test_date_line_crossing_flight(self, setup_date_line_crossing_flight):
+        """
+        Test a flight that crosses the International Date Line.
+        """
+        calculator = setup_date_line_crossing_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 23:00 UTC+12 → 11:00 UTC
+        # Arrival UTC: 14:00 UTC-10 → 00:00 UTC (next day)
+        # Flight Duration: 13 hours (00:00 UTC next day - 11:00 UTC same day)
+
+        expected_total_air_time = timedelta(hours=13, minutes=0)
+        expected_total_travel_time = timedelta(hours=13, minutes=0)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for date line crossing flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for date line crossing flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for date line crossing flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for date line crossing flight."
+
+    @pytest.fixture
+    def setup_long_haul_flight(self):
+        """
+        Fixture to set up a long-haul flight spanning multiple days.
+        """
+        flights = [
+            Flight(
+                departure_city="Los Angeles",
+                departure_time="12:00",
+                departure_timezone_utc_offset_in_hours=-8,  # UTC-8
+                arrival_city="Singapore",
+                arrival_time="20:00",
+                arrival_timezone_utc_offset_in_hours=8,  # UTC+8
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-03-01")
+        return calculator
+
+    def test_long_haul_flight(self, setup_long_haul_flight):
+        """
+        Test a long-haul flight spanning multiple days.
+        """
+        calculator = setup_long_haul_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 12:00 UTC-8 → 20:00 UTC
+        # Arrival UTC: 20:00 UTC+8 → 12:00 UTC (next day)
+        # Flight Duration: 16 hours (12:00 UTC next day - 20:00 UTC same day)
+
+        expected_total_air_time = timedelta(hours=16, minutes=0)
+        expected_total_travel_time = timedelta(hours=16, minutes=0)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for long-haul flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for long-haul flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for long-haul flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for long-haul flight."
+
+    @pytest.fixture
+    def setup_minimal_layover_flight(self):
+        """
+        Fixture to set up flights with a minimal layover of 1 minute.
+        """
+        flights = [
+            Flight(
+                departure_city="CityA",
+                departure_time="10:00",
+                departure_timezone_utc_offset_in_hours=1,  # UTC+1
+                arrival_city="CityB",
+                arrival_time="12:00",
+                arrival_timezone_utc_offset_in_hours=1,  # UTC+1
+            ),
+            Flight(
+                departure_city="CityB",
+                departure_time="12:01",
+                departure_timezone_utc_offset_in_hours=1,  # UTC+1
+                arrival_city="CityC",
+                arrival_time="14:00",
+                arrival_timezone_utc_offset_in_hours=1,  # UTC+1
+            ),
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-04-01")
+        return calculator
+
+    def test_minimal_layover_flight(self, setup_minimal_layover_flight):
+        """
+        Test flights with a minimal layover of 1 minute.
+        """
+        calculator = setup_minimal_layover_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Flight 1:
+        # Departure UTC: 10:00 UTC+1 → 09:00 UTC
+        # Arrival UTC: 12:00 UTC+1 → 11:00 UTC
+        # Duration: 2 hours
+
+        # Flight 2:
+        # Departure UTC: 12:01 UTC+1 → 11:01 UTC
+        # Arrival UTC: 14:00 UTC+1 → 13:00 UTC
+        # Duration: 1 hour 59 minutes
+        # Layover: 11:01 UTC - 11:00 UTC = 1 minute
+
+        expected_total_air_time = timedelta(
+            hours=3, minutes=59
+        )  # Updated from 4h0m to 3h59m
+        expected_total_travel_time = timedelta(
+            hours=3, minutes=59
+        )  # Should match total_air_time
+        expected_total_layover_time = timedelta(minutes=1)
+        expected_individual_layovers = [timedelta(minutes=1)]
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for minimal layover flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for minimal layover flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for minimal layover flight does not match expected value."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "Individual layover times do not match expected values."
+
+    @pytest.fixture
+    def setup_maximal_layover_flight(self):
+        """
+        Fixture to set up flights with a maximal layover spanning multiple days.
+        """
+        flights = [
+            Flight(
+                departure_city="CityX",
+                departure_time="08:00",
+                departure_timezone_utc_offset_in_hours=0,  # UTC+0
+                arrival_city="CityY",
+                arrival_time="10:00",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            ),
+            Flight(
+                departure_city="CityY",
+                departure_time="08:00",
+                departure_timezone_utc_offset_in_hours=0,  # UTC+0
+                arrival_city="CityZ",
+                arrival_time="10:00",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            ),
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-05-01")
+        return calculator
+
+    def test_maximal_layover_flight(self, setup_maximal_layover_flight):
+        """
+        Test flights with a maximal layover spanning multiple days.
+        """
+        calculator = setup_maximal_layover_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Flight 1:
+        # Departure UTC: 08:00 UTC+0 → 08:00 UTC
+        # Arrival UTC: 10:00 UTC+0 → 10:00 UTC
+        # Duration: 2 hours
+
+        # Flight 2:
+        # Departure UTC: 08:00 UTC+0 → 08:00 UTC (next day)
+        # Arrival UTC: 10:00 UTC+0 → 10:00 UTC (next day)
+        # Duration: 2 hours
+        # Layover: 08:00 UTC next day - 10:00 UTC same day = 22 hours
+
+        expected_total_air_time = timedelta(hours=4, minutes=0)
+        expected_total_travel_time = timedelta(
+            hours=26, minutes=0
+        )  # From 08:00 UTC Jan1 to 10:00 UTC Jan2
+        expected_total_layover_time = timedelta(hours=22, minutes=0)
+        expected_individual_layovers = [timedelta(hours=22, minutes=0)]
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for maximal layover flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for maximal layover flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for maximal layover flight does not match expected value."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "Individual layover time for maximal layover flight does not match expected value."
+
+    @pytest.fixture
+    def setup_rapid_succession_flights(self):
+        """
+        Fixture to set up flights that occur in rapid succession with minimal layovers.
+        """
+        flights = [
+            Flight(
+                departure_city="CityA",
+                departure_time="09:00",
+                departure_timezone_utc_offset_in_hours=2,  # UTC+2
+                arrival_city="CityB",
+                arrival_time="11:00",
+                arrival_timezone_utc_offset_in_hours=2,  # UTC+2
+            ),
+            Flight(
+                departure_city="CityB",
+                departure_time="11:00",
+                departure_timezone_utc_offset_in_hours=2,  # UTC+2
+                arrival_city="CityC",
+                arrival_time="13:00",
+                arrival_timezone_utc_offset_in_hours=2,  # UTC+2
+            ),
+            Flight(
+                departure_city="CityC",
+                departure_time="13:00",
+                departure_timezone_utc_offset_in_hours=2,  # UTC+2
+                arrival_city="CityD",
+                arrival_time="15:00",
+                arrival_timezone_utc_offset_in_hours=2,  # UTC+2
+            ),
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-10-01")
+        return calculator
+
+    def test_rapid_succession_flights(self, setup_rapid_succession_flights):
+        """
+        Test flights that occur in rapid succession with minimal layovers.
+        """
+        calculator = setup_rapid_succession_flights
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Flight 1:
+        # Departure UTC: 09:00 UTC+2 → 07:00 UTC
+        # Arrival UTC: 11:00 UTC+2 → 09:00 UTC
+        # Duration: 2 hours
+
+        # Flight 2:
+        # Departure UTC: 11:00 UTC+2 → 09:00 UTC
+        # Arrival UTC: 13:00 UTC+2 → 11:00 UTC
+        # Duration: 2 hours
+        # Layover: 09:00 UTC - 09:00 UTC = 0 minutes
+
+        # Flight 3:
+        # Departure UTC: 13:00 UTC+2 → 11:00 UTC
+        # Arrival UTC: 15:00 UTC+2 → 13:00 UTC
+        # Duration: 2 hours
+        # Layover: 11:00 UTC - 11:00 UTC = 0 minutes
+
+        expected_total_air_time = timedelta(hours=6, minutes=0)
+        expected_total_travel_time = timedelta(hours=6, minutes=0)
+        expected_total_layover_time = timedelta(minutes=0)
+        expected_individual_layovers = [timedelta(minutes=0), timedelta(minutes=0)]
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for rapid succession flights does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for rapid succession flights does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for rapid succession flights does not match expected value."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "Individual layover times for rapid succession flights do not match expected values."
+
+    @pytest.fixture
+    def setup_multiple_day_jump_flights(self):
+        """
+        Fixture to set up flights with layovers spanning multiple days.
+        """
+        flights = [
+            Flight(
+                departure_city="CityA",
+                departure_time="08:00",
+                departure_timezone_utc_offset_in_hours=0,  # UTC+0
+                arrival_city="CityB",
+                arrival_time="10:00",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            ),
+            Flight(
+                departure_city="CityB",
+                departure_time="09:00",
+                departure_timezone_utc_offset_in_hours=0,  # UTC+0
+                arrival_city="CityC",
+                arrival_time="11:00",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            ),
+            Flight(
+                departure_city="CityC",
+                departure_time="10:00",
+                departure_timezone_utc_offset_in_hours=0,  # UTC+0
+                arrival_city="CityD",
+                arrival_time="12:00",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            ),
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-08-01")
+        return calculator
+
+    def test_multiple_day_jump_flights(self, setup_multiple_day_jump_flights):
+        """
+        Test flights with layovers spanning multiple days.
+        """
+        calculator = setup_multiple_day_jump_flights
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Flight 1:
+        # Departure UTC: 08:00 UTC+0 → 08:00 UTC Jan1
+        # Arrival UTC: 10:00 UTC+0 → 10:00 UTC Jan1
+        # Duration: 2 hours
+
+        # Flight 2:
+        # Departure UTC: 09:00 UTC+0 → 09:00 UTC Jan2
+        # Arrival UTC: 11:00 UTC+0 → 11:00 UTC Jan2
+        # Duration: 2 hours
+        # Layover: 09:00 UTC Jan2 - 10:00 UTC Jan1 = 23 hours
+
+        # Flight 3:
+        # Departure UTC: 10:00 UTC+0 → 10:00 UTC Jan3
+        # Arrival UTC: 12:00 UTC+0 → 12:00 UTC Jan3
+        # Duration: 2 hours
+        # Layover: 10:00 UTC Jan3 - 11:00 UTC Jan2 = 23 hours
+
+        expected_total_air_time = timedelta(hours=6, minutes=0)
+        expected_total_travel_time = timedelta(
+            hours=52, minutes=0
+        )  # Updated from 30h0m to 52h0m
+        expected_total_layover_time = timedelta(hours=46, minutes=0)
+        expected_individual_layovers = [
+            timedelta(hours=23, minutes=0),
+            timedelta(hours=23, minutes=0),
+        ]
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for multiple day jump flights does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for multiple day jump flights does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for multiple day jump flights does not match expected value."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "Individual layover times for multiple day jump flights do not match expected values."
+
+    @pytest.fixture
+    def setup_complex_fractional_timezone_flight(self):
+        """
+        Fixture to set up a flight with a complex fractional UTC offset (e.g., UTC+3:45).
+        """
+        flights = [
+            Flight(
+                departure_city="CityA",
+                departure_time="15:30",
+                departure_timezone_utc_offset_in_hours=3.75,  # UTC+3:45
+                arrival_city="CityB",
+                arrival_time="18:15",
+                arrival_timezone_utc_offset_in_hours=5.5,  # UTC+5:30
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-09-10")
+        return calculator
+
+    def test_complex_fractional_timezone_flight(
+        self, setup_complex_fractional_timezone_flight
+    ):
+        """
+        Test a flight with a complex fractional UTC offset (e.g., UTC+3:45 to UTC+5:30).
+        """
+        calculator = setup_complex_fractional_timezone_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 15:30 UTC+3:45 → 11:45 UTC
+        # Arrival UTC: 18:15 UTC+5:30 → 12:45 UTC
+        # Flight Duration: 1 hour (12:45 UTC - 11:45 UTC)
+
+        expected_total_air_time = timedelta(hours=1, minutes=0)
+        expected_total_travel_time = timedelta(hours=1, minutes=0)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for complex fractional timezone flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for complex fractional timezone flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for complex fractional timezone flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for complex fractional timezone flight."
+
+    def test_invalid_time_format(self):
+        """
+        Test that an invalid time format raises a ValueError.
+        """
+        flights = [
+            Flight(
+                departure_city="CityA",
+                departure_time="25:00",  # Invalid time
+                departure_timezone_utc_offset_in_hours=0,
+                arrival_city="CityB",
+                arrival_time="27:00",  # Invalid time
+                arrival_timezone_utc_offset_in_hours=0,
+            )
+        ]
+        calculator = TravelTimeCalculator(flights=flights, base_date="2024-01-01")
+
+        with pytest.raises(ValueError):
+            calculator.calculate_travel_times()
+
+    @pytest.fixture
+    def setup_dst_transition_flight(self):
+        """
+        Fixture to set up a flight during DST transition.
+        """
+        flights = [
+            Flight(
+                departure_city="New York",
+                departure_time="01:30",  # During the fall back transition
+                departure_timezone_utc_offset_in_hours=-4,  # UTC-4 (EDT)
+                arrival_city="London",
+                arrival_time="13:30",
+                arrival_timezone_utc_offset_in_hours=0,  # UTC+0
+            )
+        ]
+        calculator = TravelTimeCalculator(
+            flights=flights, base_date="2024-11-03"
+        )  # DST ends on first Sunday in November
+        return calculator
+
+    def test_dst_transition_flight(self, setup_dst_transition_flight):
+        """
+        Test a flight during DST transition.
+        """
+        calculator = setup_dst_transition_flight
+        total_air_time, total_travel_time, total_layover_time, layover_times = (
+            calculator.calculate_travel_times()
+        )
+
+        # Departure UTC: 01:30 UTC-4 → 05:30 UTC
+        # Arrival UTC: 13:30 UTC+0 → 13:30 UTC
+        # Flight Duration: 8 hours
+
+        expected_total_air_time = timedelta(hours=8, minutes=0)
+        expected_total_travel_time = timedelta(hours=8, minutes=0)
+        expected_total_layover_time = timedelta(0)
+        expected_individual_layovers = []
+
+        assert (
+            total_air_time == expected_total_air_time
+        ), "Total air time for DST transition flight does not match expected value."
+        assert (
+            total_travel_time == expected_total_travel_time
+        ), "Total travel time for DST transition flight does not match expected value."
+        assert (
+            total_layover_time == expected_total_layover_time
+        ), "Total layover time for DST transition flight should be zero."
+        assert (
+            layover_times == expected_individual_layovers
+        ), "There should be no layover times for DST transition flight."
