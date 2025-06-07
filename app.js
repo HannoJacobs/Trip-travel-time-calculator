@@ -16,6 +16,272 @@ function initializeApp() {
     document.getElementById('calculate-btn').addEventListener('click', calculateTravelTimes);
 }
 
+// Automatic timezone detection functions
+async function getTimezoneOffset(cityName) {
+    try {
+        // First, geocode the city name to get coordinates
+        const coordinates = await geocodeCity(cityName);
+        if (!coordinates) {
+            throw new Error(`Could not find location: ${cityName}`);
+        }
+
+        // Then get timezone information from coordinates
+        const timezoneInfo = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lon);
+        return timezoneInfo;
+    } catch (error) {
+        console.error('Error getting timezone offset:', error);
+        throw error;
+    }
+}
+
+async function geocodeCity(cityName) {
+    // Helper function to create a fetch with timeout
+    const fetchWithTimeout = (url, timeout = 5000) => {
+        return Promise.race([
+            fetch(url),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), timeout)
+            )
+        ]);
+    };
+
+    try {
+        // Using OpenStreetMap Nominatim API (free geocoding service) with 5 second timeout
+        const response = await fetchWithTimeout(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=json&limit=1`,
+            5000
+        );
+        
+        if (!response.ok) {
+            throw new Error('Geocoding service unavailable');
+        }
+        
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            throw new Error(`No location found for: ${cityName}`);
+        }
+        
+        return {
+            lat: parseFloat(data[0].lat),
+            lon: parseFloat(data[0].lon),
+            displayName: data[0].display_name
+        };
+    } catch (error) {
+        console.error('Geocoding error:', error);
+        throw error;
+    }
+}
+
+async function getTimezoneFromCoordinates(lat, lon) {
+    // Helper function to create a fetch with timeout
+    const fetchWithTimeout = (url, timeout = 3000) => {
+        return Promise.race([
+            fetch(url),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), timeout)
+            )
+        ]);
+    };
+
+    try {
+        // Try using the free GeoNames timezone API with 3 second timeout
+        const response = await fetchWithTimeout(
+            `https://secure.geonames.org/timezoneJSON?lat=${lat}&lng=${lon}&username=demo`,
+            3000
+        );
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.rawOffset !== undefined) {
+                const utcOffset = data.rawOffset + (data.dstOffset || 0);
+                return {
+                    utcOffset: utcOffset,
+                    timezoneName: data.timezoneId || `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`
+                };
+            }
+        }
+    } catch (error) {
+        console.log('GeoNames API failed, falling back to TimeAPI.io');
+    }
+    
+    try {
+        // Fallback: Try TimeAPI.io (free service) with 3 second timeout
+        const response = await fetchWithTimeout(
+            `https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`,
+            3000
+        );
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.standardUtcOffset) {
+                // Parse offset string like "-05:00" to number
+                const offsetMatch = data.standardUtcOffset.match(/([+-])(\d{2}):(\d{2})/);
+                if (offsetMatch) {
+                    const sign = offsetMatch[1] === '+' ? 1 : -1;
+                    const hours = parseInt(offsetMatch[2]);
+                    const minutes = parseInt(offsetMatch[3]);
+                    const utcOffset = sign * (hours + minutes / 60);
+                    
+                    return {
+                        utcOffset: utcOffset,
+                        timezoneName: data.timeZone || `UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}`
+                    };
+                }
+            }
+        }
+    } catch (error) {
+        console.log('TimeAPI.io failed, falling back to estimation');
+    }
+    
+    // Final fallback to coordinate-based estimation
+    const utcOffset = estimateTimezoneOffset(lat, lon);
+    return {
+        utcOffset: utcOffset,
+        timezoneName: `Estimated (UTC${utcOffset >= 0 ? '+' : ''}${utcOffset})`
+    };
+}
+
+function estimateTimezoneOffset(lat, lon) {
+    // Simple longitude-based timezone estimation
+    // Each 15 degrees of longitude ≈ 1 hour of time difference
+    let offset = Math.round(lon / 15);
+    
+    // Clamp to valid timezone range
+    offset = Math.max(-12, Math.min(12, offset));
+    
+    // Apply regional adjustments for known exceptions
+    
+    // Asia adjustments
+    if (lat > 5 && lat < 55 && lon > 70 && lon < 150) {
+        if (lon > 68 && lon < 80) offset = 5; // Pakistan
+        if (lon > 80 && lon < 92) offset = 5.5; // India
+        if (lon > 92 && lon < 108) offset = 7; // Southeast Asia
+        if (lon > 108 && lon < 128) offset = 8; // China, Philippines
+        if (lon > 128 && lon < 146) offset = 9; // Japan, Korea
+    }
+    
+    // Australia adjustments
+    if (lat < -10 && lat > -45 && lon > 110 && lon < 155) {
+        if (lon > 125 && lon < 141) offset = 9.5; // Central Australia
+        if (lon > 141 && lon < 155) offset = 10; // Eastern Australia
+    }
+    
+    // North America adjustments
+    if (lat > 25 && lat < 70 && lon > -170 && lon < -50) {
+        if (lon > -130 && lon < -100) offset = -7; // Mountain Time
+        if (lon > -100 && lon < -85) offset = -6; // Central Time
+        if (lon > -85 && lon < -65) offset = -5; // Eastern Time
+    }
+    
+    // Europe adjustments
+    if (lat > 35 && lat < 70 && lon > -10 && lon < 40) {
+        if (lon > -10 && lon < 20) offset = 1; // Central European Time
+        if (lon > 20 && lon < 40) offset = 2; // Eastern European Time
+    }
+    
+    return offset;
+}
+
+// Debounce timers for auto-detection
+const debounceTimers = {};
+
+async function autoDetectTimezone(flightId, isArrival = false) {
+    const cityInputId = isArrival ? `arrival-city-${flightId}` : `departure-city-${flightId}`;
+    const timezoneSelectId = isArrival ? `arrival-timezone-${flightId}` : `departure-timezone-${flightId}`;
+    const timezoneDisplayId = isArrival ? `arrival-timezone-display-${flightId}` : `departure-timezone-display-${flightId}`;
+    
+    const cityInput = document.getElementById(cityInputId);
+    const timezoneSelect = document.getElementById(timezoneSelectId);
+    const timezoneDisplay = document.getElementById(timezoneDisplayId);
+    
+    if (!cityInput.value.trim()) {
+        return;
+    }
+    
+    if (timezoneDisplay) {
+        timezoneDisplay.innerHTML = 'Detecting timezone...';
+        timezoneDisplay.className = 'timezone-display loading';
+    }
+    
+    try {
+        const timezoneInfo = await getTimezoneOffset(cityInput.value.trim());
+        
+        // Set the timezone in the select dropdown
+        timezoneSelect.value = timezoneInfo.utcOffset;
+        
+        // Show timezone information
+        if (timezoneDisplay) {
+            timezoneDisplay.innerHTML = `Timezone: UTC${timezoneInfo.utcOffset >= 0 ? '+' : ''}${timezoneInfo.utcOffset}`;
+            timezoneDisplay.className = 'timezone-display success';
+        }
+        
+
+        
+    } catch (error) {
+        if (timezoneDisplay) {
+            timezoneDisplay.innerHTML = 'Could not detect timezone';
+            timezoneDisplay.className = 'timezone-display error';
+        }
+
+    }
+}
+
+// Auto-detect timezone when user stops typing
+function setupAutoDetection(flightId, isArrival = false) {
+    const cityInputId = isArrival ? `arrival-city-${flightId}` : `departure-city-${flightId}`;
+    const timezoneDisplayId = isArrival ? `arrival-timezone-display-${flightId}` : `departure-timezone-display-${flightId}`;
+    const cityInput = document.getElementById(cityInputId);
+    const timezoneDisplay = document.getElementById(timezoneDisplayId);
+    
+    if (!cityInput) return;
+    
+    // Clear timezone display when input is cleared
+    cityInput.addEventListener('input', function() {
+        const debounceKey = `${flightId}-${isArrival}`;
+        
+        // Clear previous timer
+        if (debounceTimers[debounceKey]) {
+            clearTimeout(debounceTimers[debounceKey]);
+        }
+        
+        // Clear timezone display if input is empty
+        if (!this.value.trim()) {
+            if (timezoneDisplay) {
+                timezoneDisplay.innerHTML = '';
+                timezoneDisplay.className = 'timezone-display';
+            }
+            return;
+        }
+        
+        // Show "detecting..." after a short delay
+        if (timezoneDisplay && this.value.trim().length > 2) {
+            timezoneDisplay.innerHTML = 'Detecting timezone...';
+            timezoneDisplay.className = 'timezone-display pending';
+        }
+        
+        // Debounce the auto-detection (wait for user to stop typing)
+        debounceTimers[debounceKey] = setTimeout(() => {
+            if (this.value.trim().length > 2) {
+                autoDetectTimezone(flightId, isArrival);
+            }
+        }, 1500); // Wait 1.5 seconds after user stops typing
+    });
+    
+    // Also trigger on Enter key
+    cityInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && this.value.trim().length > 2) {
+            const debounceKey = `${flightId}-${isArrival}`;
+            if (debounceTimers[debounceKey]) {
+                clearTimeout(debounceTimers[debounceKey]);
+            }
+            autoDetectTimezone(flightId, isArrival);
+        }
+    });
+}
+
+
+
 function addFlightForm() {
     flightCount++;
     
@@ -38,62 +304,68 @@ function addFlightForm() {
             </button>` : ''}
         </div>
         
-        <div class="flight-grid">
-            <div class="form-group">
-                <label for="departure-city-${flightCount}">Departure City</label>
-                <input type="text" id="departure-city-${flightCount}" name="departure-city" 
-                       placeholder="e.g., New York" required>
+        <div class="flight-sections">
+            <div class="departure-section">
+                <h4 class="section-title">
+                    <i class="fas fa-plane-departure"></i>
+                    Departure
+                </h4>
+                <div class="section-grid">
+                    <div class="form-group">
+                        <label for="departure-city-${flightCount}">Departure City</label>
+                        <input type="text" id="departure-city-${flightCount}" name="departure-city" 
+                               placeholder="e.g., New York" required>
+                        <input type="hidden" id="departure-timezone-${flightCount}" name="departure-timezone" value="0">
+                        <div class="timezone-display" id="departure-timezone-display-${flightCount}"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="departure-date-${flightCount}">Departure Date</label>
+                        <input type="date" id="departure-date-${flightCount}" name="departure-date" 
+                               value="${today}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="departure-time-${flightCount}">Departure Time</label>
+                        <input type="time" id="departure-time-${flightCount}" name="departure-time" required>
+                    </div>
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="departure-date-${flightCount}">Departure Date</label>
-                <input type="date" id="departure-date-${flightCount}" name="departure-date" 
-                       value="${today}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="departure-time-${flightCount}">Departure Time</label>
-                <input type="time" id="departure-time-${flightCount}" name="departure-time" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="departure-timezone-${flightCount}">Departure Timezone (UTC Offset)</label>
-                <select id="departure-timezone-${flightCount}" name="departure-timezone" class="timezone-input" required>
-                    ${generateTimezoneOptions()}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="arrival-city-${flightCount}">Arrival City</label>
-                <input type="text" id="arrival-city-${flightCount}" name="arrival-city" 
-                       placeholder="e.g., London" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="arrival-date-${flightCount}">Landing Date</label>
-                <input type="date" id="arrival-date-${flightCount}" name="arrival-date" 
-                       value="${today}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="arrival-time-${flightCount}">Arrival Time</label>
-                <input type="time" id="arrival-time-${flightCount}" name="arrival-time" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="arrival-timezone-${flightCount}">Arrival Timezone (UTC Offset)</label>
-                <select id="arrival-timezone-${flightCount}" name="arrival-timezone" class="timezone-input" required>
-                    ${generateTimezoneOptions()}
-                </select>
+            <div class="arrival-section">
+                <h4 class="section-title">
+                    <i class="fas fa-plane-arrival"></i>
+                    Arrival
+                </h4>
+                <div class="section-grid">
+                    <div class="form-group">
+                        <label for="arrival-city-${flightCount}">Arrival City</label>
+                        <input type="text" id="arrival-city-${flightCount}" name="arrival-city" 
+                               placeholder="e.g., London" required>
+                        <input type="hidden" id="arrival-timezone-${flightCount}" name="arrival-timezone" value="0">
+                        <div class="timezone-display" id="arrival-timezone-display-${flightCount}"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="arrival-date-${flightCount}">Landing Date</label>
+                        <input type="date" id="arrival-date-${flightCount}" name="arrival-date" 
+                               value="${today}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="arrival-time-${flightCount}">Arrival Time</label>
+                        <input type="time" id="arrival-time-${flightCount}" name="arrival-time" required>
+                    </div>
+                </div>
             </div>
         </div>
     `;
     
     flightsContainer.appendChild(flightDiv);
     
-    // Set default timezone values
-    document.getElementById(`departure-timezone-${flightCount}`).value = '0';
-    document.getElementById(`arrival-timezone-${flightCount}`).value = '0';
+    // Setup auto-detection for this flight
+    setupAutoDetection(flightCount, false); // departure
+    setupAutoDetection(flightCount, true);  // arrival
 }
 
 function removeFlightForm(flightId) {
