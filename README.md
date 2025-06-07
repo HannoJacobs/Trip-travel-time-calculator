@@ -1,4 +1,4 @@
-# [✈️ Trip Travel Time Calculator](hannojacobs.github.io/Trip-travel-time-calculator/)
+# ✈️ [Trip Travel Time Calculator](https://hannojacobs.github.io/Trip-travel-time-calculator/)
 
 > **Calculate total flight time, layover time, and travel time for complex multi-stage journeys across time zones**
 
