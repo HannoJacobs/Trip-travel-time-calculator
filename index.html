@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Time Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-plane"></i> Travel Time Calculator</h1>
+                <p>Calculate total flight time, layover time, and travel time for multi-stage trips</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="form-section">
+                <div class="form-header">
+                    <h2>Add Your Flights</h2>
+                    <p>Enter details for each flight in your journey</p>
+                </div>
+
+                <div class="departure-date-section">
+                    <label for="departure-date">Departure Date:</label>
+                    <input type="date" id="departure-date" class="date-input" required>
+                </div>
+
+                <div id="flights-container">
+                    <!-- Flight forms will be added here -->
+                </div>
+
+                <div class="form-actions">
+                    <button id="add-flight-btn" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> Add Flight
+                    </button>
+                    <button id="calculate-btn" class="btn btn-primary">
+                        <i class="fas fa-calculator"></i> Calculate Travel Times
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-section" id="results-section" style="display: none;">
+                <div class="results-header">
+                    <h2><i class="fas fa-chart-line"></i> Travel Time Results</h2>
+                </div>
+
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-icon">
+                            <i class="fas fa-plane-departure"></i>
+                        </div>
+                        <div class="result-content">
+                            <h3>Total Flight Time</h3>
+                            <p id="total-air-time" class="result-value">--</p>
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <div class="result-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="result-content">
+                            <h3>Total Travel Time</h3>
+                            <p id="total-travel-time" class="result-value">--</p>
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <div class="result-icon">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="result-content">
+                            <h3>Total Layover Time</h3>
+                            <p id="total-layover-time" class="result-value">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="layover-details" id="layover-details">
+                    <h3><i class="fas fa-list"></i> Individual Layovers</h3>
+                    <div id="individual-layovers">
+                        <!-- Individual layover times will be shown here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 Travel Time Calculator. Built for travelers by travelers.</p>
+        </footer>
+    </div>
+
+    <script src="calculator.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
