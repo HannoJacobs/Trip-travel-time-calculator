@@ -8,10 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Set default departure date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('departure-date').value = today;
-    
     // Add first flight form
     addFlightForm();
     
@@ -27,6 +23,9 @@ function addFlightForm() {
     const flightDiv = document.createElement('div');
     flightDiv.className = 'flight-form fade-in';
     flightDiv.id = `flight-${flightCount}`;
+    
+    // Set default dates to today for departure and landing
+    const today = new Date().toISOString().split('T')[0];
     
     flightDiv.innerHTML = `
         <div class="flight-header">
@@ -47,6 +46,12 @@ function addFlightForm() {
             </div>
             
             <div class="form-group">
+                <label for="departure-date-${flightCount}">Departure Date</label>
+                <input type="date" id="departure-date-${flightCount}" name="departure-date" 
+                       value="${today}" required>
+            </div>
+            
+            <div class="form-group">
                 <label for="departure-time-${flightCount}">Departure Time</label>
                 <input type="time" id="departure-time-${flightCount}" name="departure-time" required>
             </div>
@@ -62,6 +67,12 @@ function addFlightForm() {
                 <label for="arrival-city-${flightCount}">Arrival City</label>
                 <input type="text" id="arrival-city-${flightCount}" name="arrival-city" 
                        placeholder="e.g., London" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="arrival-date-${flightCount}">Landing Date</label>
+                <input type="date" id="arrival-date-${flightCount}" name="arrival-date" 
+                       value="${today}" required>
             </div>
             
             <div class="form-group">
@@ -155,21 +166,31 @@ function validateFlightData() {
         if (!formData.departureCity.trim()) {
             errors.push(`Flight ${flightNumber}: Please enter departure city.`);
         }
+        if (!formData.departureDate) {
+            errors.push(`Flight ${flightNumber}: Please select departure date.`);
+        }
         if (!formData.departureTime) {
             errors.push(`Flight ${flightNumber}: Please enter departure time.`);
         }
         if (!formData.arrivalCity.trim()) {
             errors.push(`Flight ${flightNumber}: Please enter arrival city.`);
         }
+        if (!formData.arrivalDate) {
+            errors.push(`Flight ${flightNumber}: Please select landing date.`);
+        }
         if (!formData.arrivalTime) {
             errors.push(`Flight ${flightNumber}: Please enter arrival time.`);
         }
+        
+        // Validate that landing date is not before departure date
+        if (formData.departureDate && formData.arrivalDate) {
+            const depDate = new Date(formData.departureDate);
+            const arrDate = new Date(formData.arrivalDate);
+            if (arrDate < depDate) {
+                errors.push(`Flight ${flightNumber}: Landing date cannot be before departure date.`);
+            }
+        }
     });
-    
-    const departureDate = document.getElementById('departure-date').value;
-    if (!departureDate) {
-        errors.push('Please select a departure date.');
-    }
     
     return errors;
 }
@@ -195,9 +216,11 @@ function collectFlightData() {
         
         const flight = new Flight(
             data.departureCity,
+            data.departureDate,
             data.departureTime,
             parseFloat(data.departureTimezone),
             data.arrivalCity,
+            data.arrivalDate,
             data.arrivalTime,
             parseFloat(data.arrivalTimezone)
         );
@@ -225,10 +248,9 @@ function calculateTravelTimes() {
         
         // Collect flight data
         const flights = collectFlightData();
-        const departureDate = document.getElementById('departure-date').value;
         
         // Create calculator and calculate times
-        const calculator = new TravelTimeCalculator(flights, departureDate);
+        const calculator = new TravelTimeCalculator(flights);
         
         // Get results
         const totalAirTime = calculator.getTotalAirTime();

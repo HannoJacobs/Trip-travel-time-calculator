@@ -43,30 +43,51 @@ def get_timezone_with_suggestions(place_name):
 
         return timezone_name, utc_offset_hours
 
-    except ValueError:
-        # Provide suggestions for similar locations
-        nearby_matches = geolocator.geocode(place_name, exactly_one=False, limit=5)
-        suggestions = (
-            [
-                f"{loc.address} (lat: {loc.latitude}, lon: {loc.longitude})"
-                for loc in nearby_matches
-            ]
-            if nearby_matches
-            else []
-        )
+    except ValueError as original_error:
+        # If the original error was from geocoding failure, provide suggestions
+        if "Could not find the location" in str(original_error):
+            # Try a broader search for suggestions
+            try:
+                # Split the place name and try partial matches
+                words = place_name.split()
+                suggestions = []
 
-        if suggestions:
-            raise ValueError(
-                f"Could not find an exact match for '{place_name}'. Did you mean one of these?\n"
-                + "\n".join(suggestions)
-            )
+                for word in words:
+                    if len(word) > 2:  # Skip very short words
+                        partial_matches = geolocator.geocode(
+                            word, exactly_one=False, limit=3
+                        )
+                        if partial_matches:
+                            suggestions.extend(
+                                [
+                                    f"{loc.address} (lat: {loc.latitude:.2f}, lon: {loc.longitude:.2f})"
+                                    for loc in partial_matches[
+                                        :2
+                                    ]  # Limit to 2 per word
+                                ]
+                            )
+
+                if suggestions:
+                    # Remove duplicates while preserving order
+                    unique_suggestions = list(dict.fromkeys(suggestions))
+                    raise ValueError(
+                        f"Could not find an exact match for '{place_name}'. Did you mean one of these?\n"
+                        + "\n".join(unique_suggestions[:5])  # Limit to 5 suggestions
+                    )
+                else:
+                    raise ValueError(
+                        f"No matches found for '{place_name}' or similar terms."
+                    )
+            except Exception:
+                raise ValueError(f"No matches found for '{place_name}'.")
         else:
-            raise ValueError(f"No matches found for '{place_name}'.")
+            # Re-raise the original error (e.g., timezone determination failure)
+            raise original_error
 
 
 # Example usage
 try:
-    place_name = "Luanda Angola"  # Intentionally misspelled
+    place_name = "Luanda Angola"  # Capital of Angola
     timezone_name, utc_offset_hours = get_timezone_with_suggestions(place_name)
     print(
         f"The timezone for {place_name} is {timezone_name}, and the UTC offset is {utc_offset_hours} hours."

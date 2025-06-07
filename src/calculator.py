@@ -12,18 +12,22 @@ class Flight:
     def __init__(
         self,
         departure_city: str,
+        departure_date: str,
         departure_time: str,
         departure_timezone_utc_offset_in_hours: float,
         arrival_city: str,
+        arrival_date: str,
         arrival_time: str,
         arrival_timezone_utc_offset_in_hours: float,
     ):
         self.departure_city = departure_city
+        self.departure_date = departure_date
         self.departure_time = departure_time
         self.departure_timezone_utc_offset_in_hours = (
             departure_timezone_utc_offset_in_hours
         )
         self.arrival_city = arrival_city
+        self.arrival_date = arrival_date
         self.arrival_time = arrival_time
         self.arrival_timezone_utc_offset_in_hours = arrival_timezone_utc_offset_in_hours
 
@@ -33,19 +37,42 @@ class TravelTimeCalculator:
     Calculates total air time, total travel time, and total layover time for a sequence of flights.
     """
 
-    def __init__(self, flights: List[Flight], departure_date: str = "2024-01-01"):
+    def __init__(self, flights: List[Flight]):
         """
         Initializes the TravelTimeCalculator.
 
         :param flights: List of Flight objects representing the itinerary.
-        :param departure_date: The starting date for the first flight in 'YYYY-MM-DD' format.
         """
         self.flights = flights
-        self.departure_date = departure_date
         self.layover_times: List[timedelta] = []
         self.total_air_time: timedelta = timedelta()
         self.total_travel_time: timedelta = timedelta()
         self.total_layover_time: timedelta = timedelta()
+
+    def _create_datetime(
+        self, date_str: str, time_str: str, timezone_offset: float
+    ) -> datetime:
+        """
+        Create a datetime object from date and time strings with timezone offset.
+
+        :param date_str: Date string in 'YYYY-MM-DD' format
+        :param time_str: Time string in 'HH:MM' format
+        :param timezone_offset: UTC offset in hours
+        :return: UTC datetime object
+        """
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            time_obj = datetime.strptime(time_str, "%H:%M").time()
+        except ValueError as e:
+            raise ValueError(f"Invalid date or time format: {e}")
+
+        # Create local datetime
+        local_datetime = datetime.combine(date_obj, time_obj)
+
+        # Convert to UTC
+        utc_datetime = local_datetime - timedelta(hours=timezone_offset)
+
+        return utc_datetime
 
     def calculate_travel_times(
         self,
@@ -59,17 +86,19 @@ class TravelTimeCalculator:
             - Total layover time as a timedelta object.
             - List of individual layover times as timedelta objects.
         """
-        # Initialize base date
-        try:
-            current_date = datetime.strptime(self.departure_date, "%Y-%m-%d")
-        except ValueError as e:
-            raise ValueError(f"Invalid departure_date format: {e}")
-
         # Reset cumulative variables
         self.total_air_time = timedelta()
         self.total_travel_time = timedelta()
         self.total_layover_time = timedelta()
         self.layover_times = []
+
+        if not self.flights:
+            return (
+                self.total_air_time,
+                self.total_travel_time,
+                self.total_layover_time,
+                self.layover_times,
+            )
 
         # Previous flight's arrival datetime in UTC
         prev_arrival_utc: Optional[datetime] = None
@@ -77,77 +106,54 @@ class TravelTimeCalculator:
         final_arrival_utc: Optional[datetime] = None
 
         for index, flight in enumerate(self.flights):
-            dep_city = flight.departure_city
-            dep_time_str = flight.departure_time
-            dep_timezone_offset = flight.departure_timezone_utc_offset_in_hours
-            arr_city = flight.arrival_city
-            arr_time_str = flight.arrival_time
-            arr_timezone_offset = flight.arrival_timezone_utc_offset_in_hours
-
-            # Parse local departure and arrival times
             try:
-                dep_time = datetime.strptime(dep_time_str, "%H:%M").time()
-                arr_time = datetime.strptime(arr_time_str, "%H:%M").time()
-            except ValueError as e:
-                raise ValueError(f"Invalid time format in flight {index + 1}: {e}")
-
-            # Convert local departure time to UTC datetime
-            dep_datetime_local = datetime.combine(current_date, dep_time)
-            dep_datetime_utc = dep_datetime_local - timedelta(hours=dep_timezone_offset)
-
-            # If not the first flight, ensure departure is after previous arrival
-            if prev_arrival_utc:
-                if dep_datetime_utc < prev_arrival_utc:
-                    # Assume departure is on the next day
-                    days_added = 1
-                    while dep_datetime_utc < prev_arrival_utc:
-                        dep_datetime_local += timedelta(days=1)
-                        dep_datetime_utc = dep_datetime_local - timedelta(
-                            hours=dep_timezone_offset
-                        )
-                        days_added += 1
-                        if days_added > 365:
-                            raise Exception(
-                                "Infinite loop detected in flight scheduling."
-                            )
-
-                # Calculate layover time between prev_arrival_utc and dep_datetime_utc
-                layover_duration = dep_datetime_utc - prev_arrival_utc
-                self.layover_times.append(layover_duration)
-                self.total_layover_time += layover_duration
-
-            # Convert local arrival time to UTC datetime
-            arr_datetime_local = datetime.combine(dep_datetime_local.date(), arr_time)
-            arr_datetime_utc = arr_datetime_local - timedelta(hours=arr_timezone_offset)
-
-            # Adjust arrival date until arrival UTC is after departure UTC
-            # This handles cases where arrival time in UTC is before or equal to departure time in UTC
-            days_added = 0
-            while arr_datetime_utc < dep_datetime_utc:
-                arr_datetime_local += timedelta(days=1)
-                arr_datetime_utc = arr_datetime_local - timedelta(
-                    hours=arr_timezone_offset
+                # Create departure datetime in UTC
+                dep_datetime_utc = self._create_datetime(
+                    flight.departure_date,
+                    flight.departure_time,
+                    flight.departure_timezone_utc_offset_in_hours,
                 )
-                days_added += 1
-                if days_added > 365:
-                    raise Exception("Infinite loop detected in flight scheduling.")
 
-            # Calculate flight duration
-            flight_duration = arr_datetime_utc - dep_datetime_utc
-            self.total_air_time += flight_duration
+                # Create arrival datetime in UTC
+                arr_datetime_utc = self._create_datetime(
+                    flight.arrival_date,
+                    flight.arrival_time,
+                    flight.arrival_timezone_utc_offset_in_hours,
+                )
 
-            # Update initial departure UTC
-            if index == 0:
-                initial_departure_utc = dep_datetime_utc
+                # Validate that arrival is not before departure (allow equal for zero-duration flights)
+                if arr_datetime_utc < dep_datetime_utc:
+                    raise ValueError(
+                        f"Flight {index + 1}: Arrival time cannot be before departure time"
+                    )
 
-            # Update final arrival UTC
-            final_arrival_utc = arr_datetime_utc
+                # Calculate layover time if not the first flight
+                if prev_arrival_utc:
+                    if dep_datetime_utc < prev_arrival_utc:
+                        raise ValueError(
+                            f"Flight {index + 1}: Departure time must be after the previous flight's arrival time"
+                        )
 
-            # Update previous arrival UTC for next iteration
-            prev_arrival_utc = arr_datetime_utc
+                    layover_duration = dep_datetime_utc - prev_arrival_utc
+                    self.layover_times.append(layover_duration)
+                    self.total_layover_time += layover_duration
 
-            # Update current_date for the next flight based on departure local datetime
-            current_date = dep_datetime_local.date()
+                # Calculate flight duration
+                flight_duration = arr_datetime_utc - dep_datetime_utc
+                self.total_air_time += flight_duration
+
+                # Set initial departure UTC
+                if index == 0:
+                    initial_departure_utc = dep_datetime_utc
+
+                # Update final arrival UTC
+                final_arrival_utc = arr_datetime_utc
+
+                # Update previous arrival UTC for next iteration
+                prev_arrival_utc = arr_datetime_utc
+
+            except Exception as e:
+                raise ValueError(f"Error processing flight {index + 1}: {str(e)}")
 
         # Calculate total travel time
         if initial_departure_utc and final_arrival_utc:
